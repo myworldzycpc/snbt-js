@@ -43,7 +43,11 @@ export class NbtObject {
             if (args.length == 1) {
                 return this.childs[args[0]];
             } else if (args.length > 1) {
-                return this.childs[args[0]].get(args.slice(1));
+                var child = this.childs[args[0]];
+                if (child === undefined) {
+                    return undefined;
+                }
+                return child.get(args.slice(1));
             } else {
                 return this;
             };
@@ -55,7 +59,10 @@ export class NbtObject {
                 if (index.length == 1) {
                     this.childs[index[0]] = value;
                 } else if (index.length > 1) {
-                    this.get(index.slice(0, -1)).set(index.slice(-1), value);
+                    var parent = this.get(index.slice(0, -1));
+                    if (parent !== undefined) {
+                        parent.set(index.slice(-1), value);
+                    }
                 };
             };
         };
@@ -94,7 +101,11 @@ export class NbtList {
             if (args.length == 1) {
                 return this.childs[args[0]];
             } else if (args.length > 1) {
-                return this.childs[args[0]].get(args.slice(1));
+                var child = this.childs[args[0]];
+                if (child === undefined) {
+                    return undefined;
+                }
+                return child.get(args.slice(1));
             } else {
                 return this;
             };
@@ -106,7 +117,10 @@ export class NbtList {
                 if (index.length == 1) {
                     this.childs[index[0]] = value;
                 } else if (index.length > 1) {
-                    this.get(index.slice(0, -1)).set(index.slice(-1), value);
+                    var parent = this.get(index.slice(0, -1));
+                    if (parent !== undefined) {
+                        parent.set(index.slice(-1), value);
+                    }
                 };
             };
         };
@@ -251,7 +265,7 @@ export class NbtString {
 
 export class NbtBool {
     constructor(value) {
-        this.value = value ? "true" : "false";
+        this.value = !!value;
         this.text = function (ispretty) {
             if (ispretty) {
                 return highlightCode(`${this.value}`, "bool")

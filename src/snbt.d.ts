@@ -51,7 +51,7 @@ export declare class NbtString extends NbtValue {
 }
 
 export declare class NbtBool extends NbtValue {
-  value: string;
+  value: boolean;
   constructor(value: boolean);
 }
 
