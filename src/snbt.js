@@ -265,7 +265,7 @@ export class NbtString {
 
 export class NbtBool {
     constructor(value) {
-        this.value = value ? "true" : "false";
+        this.value = !!value;
         this.text = function (ispretty) {
             if (ispretty) {
                 return highlightCode(`${this.value}`, "bool")
