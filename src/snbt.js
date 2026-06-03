@@ -194,6 +194,116 @@ export class NbtIntArray {
     };
 };
 
+export class NbtLongArray {
+    constructor(childsal) {
+        this.childs = [];
+        this.addChild = function (value) {
+            if (value instanceof NbtNumber && value.unit == "l") {
+                this.childs.push(value)
+            } else {
+                throw new Error('NbtLongArray only accept NbtNumber with unit "l"')
+            }
+        };
+        this.isempty = function () {
+            return (this.childs.length == 0 ? true : false);
+        };
+        this.get = function () {
+            var args = Array.prototype.slice.call(arguments);
+            if (gettype.call(args[0]) == "[object Array]") {
+                args = args[0];
+            };
+            if (args.length == 1) {
+                args = parsePath(args[0])
+            }
+            if (args.length == 1) {
+                return this.childs[args[0]];
+            } else if (args.length > 1) {
+                throw new Error("NbtLongArray only accept one index")
+            } else {
+                return this;
+            };
+        };
+        this.set = function (index, value) {
+            if (index.length == 1) {
+                if (value instanceof NbtNumber && value.unit == "l") {
+                    this.childs[index[0]] = value;
+                } else {
+                    throw new Error('NbtLongArray only accept NbtNumber with unit "l"')
+                }
+            } else if (index.length > 1) {
+                throw new Error("NbtLongArray only accept one index")
+            };
+        };
+        this.text = function (ispretty) {
+            var tl = [];
+            for (var i = 0; i < this.childs.length; i++) {
+                tl.push(this.childs[i].text(ispretty));
+            }
+            return `[L; ${tl.join(", ")}]`;
+        };
+        if (childsal) {
+            for (var i = 0; i < childsal.length; i++) {
+                this.addChild(childsal[i]);
+            }
+        };
+    };
+};
+
+export class NbtByteArray {
+    constructor(childsal) {
+        this.childs = [];
+        this.addChild = function (value) {
+            if (value instanceof NbtNumber && value.unit == "b") {
+                this.childs.push(value)
+            } else {
+                throw new Error('NbtByteArray only accept NbtNumber with unit "b"')
+            }
+        };
+        this.isempty = function () {
+            return (this.childs.length == 0 ? true : false);
+        };
+        this.get = function () {
+            var args = Array.prototype.slice.call(arguments);
+            if (gettype.call(args[0]) == "[object Array]") {
+                args = args[0];
+            };
+            if (args.length == 1) {
+                args = parsePath(args[0])
+            }
+            if (args.length == 1) {
+                return this.childs[args[0]];
+            } else if (args.length > 1) {
+                throw new Error("NbtByteArray only accept one index")
+            } else {
+                return this;
+            };
+        };
+        this.set = function (index, value) {
+            if (index.length == 1) {
+                if (value instanceof NbtNumber && value.unit == "b") {
+                    this.childs[index[0]] = value;
+                } else {
+                    throw new Error('NbtByteArray only accept NbtNumber with unit "b"')
+                }
+            } else if (index.length > 1) {
+                throw new Error("NbtByteArray only accept one index")
+            };
+        };
+        this.text = function (ispretty) {
+            var tl = [];
+            for (var i = 0; i < this.childs.length; i++) {
+                tl.push(this.childs[i].text(ispretty));
+            }
+            return `[B; ${tl.join(", ")}]`;
+        };
+        if (childsal) {
+            for (var i = 0; i < childsal.length; i++) {
+                this.addChild(childsal[i]);
+            }
+        };
+    };
+};
+
 export class NbtNumber {
     constructor(value, unit = "") {
         unit = unit.toLowerCase();
@@ -523,17 +633,19 @@ export function parseNbtString(str) {
 
     function parseArray() {
         index++; // 跳过 '['
-        // 检查是否IntArray
+        // 检查是否为类型化数组（B; / I; / L;）
         skipWhitespace();
+        const typedArrayCtors = { B: NbtByteArray, I: NbtIntArray, L: NbtLongArray };
         let arr;
-        if (str[index] === 'I') {
+        const TypedCtor = typedArrayCtors[str[index]];
+        if (TypedCtor) {
             index++;
             skipWhitespace();
             if (str[index] !== ';') {
                 throw new Error(`Expected semicolon`);
             }
             index++;
-            arr = new NbtIntArray();
+            arr = new TypedCtor();
         } else {
             arr = new NbtList();
         }

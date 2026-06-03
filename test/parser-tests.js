@@ -29,5 +29,21 @@ describe('NBT Parser', () => {
     expect(result.get('byte').unit).to.equal('b');
   });
 
+  it('should parse long array', () => {
+    const result = parseNbtString(`{
+      long_array: [L;100L]
+    }`);
+
+    expect(result.get("long_array").childs[0].value).to.equal(100);
+  });
+
+  it('should parse byte array', () => {
+    const result = parseNbtString(`{
+      byte_array: [B;100B]
+    }`);
+
+    expect(result.get("byte_array").childs[0].value).to.equal(100);
+  });
+
   // 添加更多测试用例...
 });
