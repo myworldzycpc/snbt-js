@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { parseNbtString, NbtObject, NbtList, NbtString, NbtNumber } from '../src/snbt.js';
+import { parseNbtString, NbtObject, NbtList, NbtString, NbtNumber, NbtIntArray } from '../src/snbt.js';
 
 describe('Path Access Tests', () => {
   describe('NbtObject.get() with non-existent paths', () => {
@@ -13,7 +13,7 @@ describe('Path Access Tests', () => {
     });
 
     it('should return undefined when accessing nested non-existent path', () => {
-      const nbt = parseNbtString(`{
+      const nbt = parseNbtString<NbtObject>(`{
         player: {
           name: "Steve"
         }
@@ -33,14 +33,14 @@ describe('Path Access Tests', () => {
     });
 
     it('should return undefined when using dot notation on non-existent path', () => {
-      const nbt = parseNbtString(`{ player: { name: "Steve" } }`);
+      const nbt = parseNbtString<NbtObject>(`{ player: { name: "Steve" } }`);
       
       const result = nbt.get('player.health');
       expect(result).to.be.undefined;
     });
 
     it('should return undefined when accessing deeply nested non-existent path', () => {
-      const nbt = parseNbtString(`{
+      const nbt = parseNbtString<NbtObject>(`{
         level1: {
           level2: {
             level3: "value"
@@ -55,7 +55,7 @@ describe('Path Access Tests', () => {
 
   describe('NbtList.get() with non-existent paths', () => {
     it('should return undefined when accessing non-existent index in nested list', () => {
-      const nbt = parseNbtString(`{
+      const nbt = parseNbtString<NbtObject>(`{
         items: [
           { id: "diamond" }
         ]
@@ -77,7 +77,7 @@ describe('Path Access Tests', () => {
     });
 
     it('should return undefined when list element exists but nested path does not', () => {
-      const nbt = parseNbtString(`{
+      const nbt = parseNbtString<NbtObject>(`{
         items: [
           { name: "item1" },
           { name: "item2" }
@@ -107,7 +107,7 @@ describe('Path Access Tests', () => {
     });
 
     it('should handle setting on deeply nested non-existent path gracefully', () => {
-      const nbt = parseNbtString(`{ level1: { level2: {} } }`);
+      const nbt = parseNbtString<NbtObject>(`{ level1: { level2: {} } }`);
       
       expect(() => {
         nbt.set(['level1', 'level2', 'level3', 'value'], new NbtString('test'));
@@ -135,7 +135,7 @@ describe('Path Access Tests', () => {
 
   describe('Valid path access should still work', () => {
     it('should correctly access existing nested paths', () => {
-      const nbt = parseNbtString(`{
+      const nbt = parseNbtString<NbtObject>(`{
         "minecraft:enchantments": {
           levels: {
             sharpness: 5
@@ -145,11 +145,11 @@ describe('Path Access Tests', () => {
       
       const result = nbt.get(['minecraft:enchantments', 'levels', 'sharpness']);
       expect(result).to.not.be.undefined;
-      expect(result.value).to.equal(5);
+      expect((result as NbtNumber).value).to.equal(5);
     });
 
     it('should correctly access array elements', () => {
-      const nbt = parseNbtString(`{
+      const nbt = parseNbtString<NbtObject>(`{
         items: [
           { id: "diamond", count: 5 },
           { id: "gold", count: 10 }
@@ -158,7 +158,17 @@ describe('Path Access Tests', () => {
       
       const result = nbt.get(['items', 1, 'id']);
       expect(result).to.not.be.undefined;
-      expect(result.value).to.equal('gold');
+      expect((result as NbtString).value).to.equal('gold');
+
+      const intArray = new NbtIntArray([
+        new NbtNumber(0),
+        new NbtNumber(1),
+        new NbtNumber(2),
+        new NbtNumber(3)
+      ]);
+
+      intArray.set(0, new NbtNumber(100));
+      expect((intArray.get(0) as NbtNumber).value).to.equal(100);
     });
 
     it('should correctly set values on existing paths', () => {
@@ -170,7 +180,7 @@ describe('Path Access Tests', () => {
       
       nbt.set(['player', 'health'], new NbtNumber(15));
       const result = nbt.get(['player', 'health']);
-      expect(result.value).to.equal(15);
+      expect((result as NbtNumber).value).to.equal(15);
     });
   });
 });

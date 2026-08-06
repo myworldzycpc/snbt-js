@@ -1,0 +1,28 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug Mocha Tests", // 配置名称，在调试面板中选择
+            // 关键点1: program必须指向 _mocha，不能是 mocha 或测试文件[reference:2]
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            // 关键点2: 测试文件路径和所有参数都必须放在 args 里[reference:3]
+            "args": [
+                "${file}", // 调试当前打开的文件，调试单个文件很方便[reference:4]
+                // "test/**/*.spec.js", // 如想调试整个 test 目录，可替换上一行
+                "--timeout",
+                "5000", // 关键点3: 必须设置超时，防止异步测试提前退出[reference:5][reference:6]
+                "--colors"
+            ],
+            "console": "integratedTerminal", // 在 VSCode 终端中运行，便于观察输出[reference:7]
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        }
+    ]
+}

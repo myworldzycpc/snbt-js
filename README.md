@@ -6,7 +6,7 @@
 
 *(Formerly known as nbtcoder.js)*
 
-A robust JavaScript library for parsing, manipulating, and serializing Minecraft's NBT (Named Binary Tag) format. 
+A robust TypeScript library for parsing, manipulating, and serializing Minecraft's NBT (Named Binary Tag) format. 
 Supports SNBT (Stringified NBT) with zero dependencies.
 
 ## Features

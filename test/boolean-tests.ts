@@ -14,8 +14,8 @@ describe('NbtBool Tests', () => {
   });
 
   it('should parse true boolean from SNBT', () => {
-    const result = parseNbtString('{ flag: true }');
-    const flag = result.get('flag');
+    const result = parseNbtString<NbtObject>('{ flag: true }');
+    const flag = result.get('flag') as NbtBool;
     
     expect(flag).to.be.instanceOf(NbtBool);
     expect(flag.value).to.be.a('boolean');
@@ -23,8 +23,8 @@ describe('NbtBool Tests', () => {
   });
 
   it('should parse false boolean from SNBT', () => {
-    const result = parseNbtString('{ flag: false }');
-    const flag = result.get('flag');
+    const result = parseNbtString<NbtObject>('{ flag: false }');
+    const flag = result.get('flag') as NbtBool;
     
     expect(flag).to.be.instanceOf(NbtBool);
     expect(flag.value).to.be.a('boolean');
@@ -62,15 +62,15 @@ describe('NbtBool Tests', () => {
   });
 
   it('should handle boolean in nested objects', () => {
-    const result = parseNbtString(`{
+    const result = parseNbtString<NbtObject>(`{
       player: {
         isAlive: true,
         isFlying: false
       }
     }`);
     
-    const isAlive = result.get('player.isAlive');
-    const isFlying = result.get('player.isFlying');
+    const isAlive = result.get('player.isAlive') as NbtBool;
+    const isFlying = result.get('player.isFlying') as NbtBool;
     
     expect(isAlive.value).to.be.a('boolean');
     expect(isAlive.value).to.equal(true);

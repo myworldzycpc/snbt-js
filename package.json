@@ -1,24 +1,35 @@
 {
   "name": "snbt-js",
   "version": "1.0.6",
-  "description": "JavaScript library for parsing and manipulating Minecraft SNBT data",
-  "main": "src/snbt.js",
+  "description": "TypeScript library for parsing and manipulating Minecraft SNBT data",
+  "main": "dist/src/snbt.js",
+  "types": "dist/src/snbt.d.ts",
   "type": "module",
+  "files": [
+    "dist",
+    "docs"
+  ],
   "scripts": {
-    "test": "mocha test/*.js"
+    "build": "tsc",
+    "test": "npm run build && mocha dist/test/*.js",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "minecraft",
     "nbt",
     "snbt",
     "parser",
+    "typescript",
     "javascript"
   ],
   "author": "myworldzycpc",
   "license": "MIT",
   "devDependencies": {
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^10.0.10",
+    "chai": "^4.3.7",
     "mocha": "^10.0.0",
-    "chai": "^4.3.7"
+    "typescript": "^5.5.0"
   },
   "repository": {
     "type": "git",

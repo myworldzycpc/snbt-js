@@ -1,6 +1,6 @@
 const gettype = Object.prototype.toString;
 
-export function changeToFloat(val) {
+export function changeToFloat(val: number): number | string {
     if ((val / 1).toString().includes(".")) {
         return (val / 1);
     } else {
@@ -8,7 +8,9 @@ export function changeToFloat(val) {
     };
 };
 
-export function highlightCode(text, type) {
+export type HighlightType = "key" | "str" | "num" | "bool" | "unit";
+
+export function highlightCode(text: string, type: HighlightType | string): string {
     if (type == "key") {
         return `<span style="color:aqua">${text}</span>`
     } else if (type == "str") {
@@ -19,293 +21,258 @@ export function highlightCode(text, type) {
         return `<span style="color:yellow">${text}</span>`
     } else if (type == "unit") {
         return `<span style="color:red">${text}</span>`
-    };
-
+    }
+    return text;
 }
 
-export class NbtObject {
-    constructor(childsal) {
+export abstract class NbtValue {
+    abstract text(ispretty?: boolean): string;
+}
+
+type Path = string | number;
+
+interface PathAccessible extends NbtValue {
+    get(path: Path | Path[]): NbtValue | undefined;
+    get(...path: Path[]): NbtValue | undefined;
+    set(index: Path | Path[], value: NbtValue): void;
+}
+
+export class NbtObject extends NbtValue {
+    childs: Record<string, NbtValue>;
+
+    constructor(childsal?: Record<string, NbtValue>) {
+        super();
         this.childs = {};
-        this.addChild = function (key, value) {
-            this.childs[key] = value;
-        };
-        this.isempty = function () {
-            return (Object.keys(this.childs).length == 0 ? true : false);
-        };
-        this.get = function () {
-            var args = Array.prototype.slice.call(arguments);
-            if (gettype.call(args[0]) == "[object Array]") {
-                args = args[0];
-            };
-            if (args.length == 1) {
-                args = parsePath(args[0])
-            }
-            if (args.length == 1) {
-                return this.childs[args[0]];
-            } else if (args.length > 1) {
-                var child = this.childs[args[0]];
-                if (child === undefined) {
-                    return undefined;
-                }
-                return child.get(args.slice(1));
-            } else {
-                return this;
-            };
-        };
-        this.set = function (index, value) {
-            if (["[object String]", "[object Number]"].includes(gettype.call(index))) {
-                this.childs[index] = value;
-            } else if (gettype.call(index) == "[object Array]") {
-                if (index.length == 1) {
-                    this.childs[index[0]] = value;
-                } else if (index.length > 1) {
-                    var parent = this.get(index.slice(0, -1));
-                    if (parent !== undefined) {
-                        parent.set(index.slice(-1), value);
-                    }
-                };
-            };
-        };
-        this.text = function (ispretty) {
-            var tl = [];
-            for (var i in this.childs) {
-                tl.push(`${ispretty ? highlightCode(i, "key") : i}: ${this.childs[i].text(ispretty)}`);
-            };
-            return `{${tl.join(", ")}}`;
-        };
         if (childsal) {
-            for (var index in childsal) {
-                this.addChild(index, childsal[index])
-            };
+            for (const index in childsal) {
+                this.addChild(index, childsal[index]);
+            }
+        }
+    }
+
+    addChild(key: string, value: NbtValue): void {
+        this.childs[key] = value;
+    };
+
+    isempty(): boolean {
+        return (Object.keys(this.childs).length == 0 ? true : false);
+    };
+
+    get(path: Path | Path[]): NbtValue | undefined;
+    get(...path: Path[]): NbtValue | undefined;
+    get(...args: any[]): NbtValue | undefined {
+        let pathArgs: Path[];
+        if (Array.isArray(args[0])) {
+            pathArgs = args[0];
+        } else {
+            pathArgs = args;
+        }
+        if (pathArgs.length == 1) {
+            pathArgs = parsePath(pathArgs[0])
+        }
+        if (pathArgs.length == 1) {
+            return this.childs[pathArgs[0] as string];
+        } else if (pathArgs.length > 1) {
+            const child = this.childs[pathArgs[0] as string];
+            if (child === undefined) {
+                return undefined;
+            }
+            return (child as PathAccessible).get(pathArgs.slice(1));
+        } else {
+            return this;
         };
     };
-};
 
-export class NbtList {
-    constructor(childsal) {
-        this.childs = [];
-        this.addChild = function (value) {
-            this.childs.push(value)
-        };
-        this.isempty = function () {
-            return (this.childs.length == 0 ? true : false);
-        };
-        this.get = function () {
-            var args = Array.prototype.slice.call(arguments);
-            if (gettype.call(args[0]) == "[object Array]") {
-                args = args[0];
-            };
-            if (args.length == 1) {
-                args = parsePath(args[0])
-            }
-            if (args.length == 1) {
-                return this.childs[args[0]];
-            } else if (args.length > 1) {
-                var child = this.childs[args[0]];
-                if (child === undefined) {
-                    return undefined;
-                }
-                return child.get(args.slice(1));
-            } else {
-                return this;
-            };
-        };
-        this.set = function (index, value) {
-            if (["[object String]", "[object Number]"].includes(gettype.call(index))) {
-                this.childs[index] = value;
-            } else if (gettype.call(index) == "[object Array]") {
-                if (index.length == 1) {
-                    this.childs[index[0]] = value;
-                } else if (index.length > 1) {
-                    var parent = this.get(index.slice(0, -1));
-                    if (parent !== undefined) {
-                        parent.set(index.slice(-1), value);
-                    }
-                };
-            };
-        };
-        this.text = function (ispretty) {
-            var tl = [];
-            for (var i = 0; i < this.childs.length; i++) {
-                tl.push(this.childs[i].text(ispretty));
-            }
-            return `[${tl.join(", ")}]`;
-        };
-        if (childsal) {
-            for (var i = 0; i < childsal.length; i++) {
-                this.addChild(childsal[i]);
-            }
-        };
-    };
-};
-
-export class NbtIntArray {
-    constructor(childsal) {
-        this.childs = [];
-        this.addChild = function (value) {
-            if (value instanceof NbtNumber && value.unit == "") {
-                this.childs.push(value)
-            } else {
-                throw new Error("NbtIntArray only accept NbtNumber without unit")
-            }
-        };
-        this.isempty = function () {
-            return (this.childs.length == 0 ? true : false);
-        };
-        this.get = function () {
-            var args = Array.prototype.slice.call(arguments);
-            if (gettype.call(args[0]) == "[object Array]") {
-                args = args[0];
-            };
-            if (args.length == 1) {
-                args = parsePath(args[0])
-            }
-            if (args.length == 1) {
-                return this.childs[args[0]];
-            } else if (args.length > 1) {
-                throw new Error("NbtIntArray only accept one index")
-            } else {
-                return this;
-            };
-        };
-        this.set = function (index, value) {
+    set(index: Path | Path[], value: NbtValue): void {
+        if (typeof index === "string" || typeof index === "number") {
+            this.childs[index as string] = value;
+        } else if (Array.isArray(index)) {
             if (index.length == 1) {
-                if (value instanceof NbtNumber && value.unit == "") {
-                    this.childs[index[0]] = value;
-                } else {
-                    throw new Error("NbtIntArray only accept NbtNumber without unit")
-                }
+                this.childs[index[0] as string] = value;
             } else if (index.length > 1) {
-                throw new Error("NbtIntArray only accept one index")
+                const parent = this.get(index.slice(0, -1));
+                if (parent !== undefined) {
+                    (parent as PathAccessible).set(index.slice(-1), value);
+                }
             };
         };
-        this.text = function (ispretty) {
-            var tl = [];
-            for (var i = 0; i < this.childs.length; i++) {
-                tl.push(this.childs[i].text(ispretty));
-            }
-            return `[I; ${tl.join(", ")}]`;
+    };
+
+    text(ispretty?: boolean): string {
+        const tl: string[] = [];
+        for (const i in this.childs) {
+            tl.push(`${ispretty ? highlightCode(i, "key") : i}: ${this.childs[i].text(ispretty)}`);
         };
-        if (childsal) {
-            for (var i = 0; i < childsal.length; i++) {
-                this.addChild(childsal[i]);
-            }
-        };
+        return `{${tl.join(", ")}}`;
     };
 };
 
-export class NbtLongArray {
-    constructor(childsal) {
+export class NbtList extends NbtValue {
+    childs: NbtValue[];
+
+    constructor(childsal?: NbtValue[]) {
+        super();
         this.childs = [];
-        this.addChild = function (value) {
-            if (value instanceof NbtNumber && value.unit == "l") {
-                this.childs.push(value)
-            } else {
-                throw new Error('NbtLongArray only accept NbtNumber with unit "l"')
-            }
-        };
-        this.isempty = function () {
-            return (this.childs.length == 0 ? true : false);
-        };
-        this.get = function () {
-            var args = Array.prototype.slice.call(arguments);
-            if (gettype.call(args[0]) == "[object Array]") {
-                args = args[0];
-            };
-            if (args.length == 1) {
-                args = parsePath(args[0])
-            }
-            if (args.length == 1) {
-                return this.childs[args[0]];
-            } else if (args.length > 1) {
-                throw new Error("NbtLongArray only accept one index")
-            } else {
-                return this;
-            };
-        };
-        this.set = function (index, value) {
-            if (index.length == 1) {
-                if (value instanceof NbtNumber && value.unit == "l") {
-                    this.childs[index[0]] = value;
-                } else {
-                    throw new Error('NbtLongArray only accept NbtNumber with unit "l"')
-                }
-            } else if (index.length > 1) {
-                throw new Error("NbtLongArray only accept one index")
-            };
-        };
-        this.text = function (ispretty) {
-            var tl = [];
-            for (var i = 0; i < this.childs.length; i++) {
-                tl.push(this.childs[i].text(ispretty));
-            }
-            return `[L; ${tl.join(", ")}]`;
-        };
         if (childsal) {
-            for (var i = 0; i < childsal.length; i++) {
-                this.addChild(childsal[i]);
+            for (const value of childsal) {
+                this.addChild(value);
             }
+        }
+    }
+
+    addChild(value: NbtValue): void {
+        this.childs.push(value)
+    };
+
+    isempty(): boolean {
+        return (this.childs.length == 0 ? true : false);
+    };
+
+    get(path: Path | Path[]): NbtValue | undefined;
+    get(...path: Path[]): NbtValue | undefined;
+    get(...args: any[]): NbtValue | undefined {
+        let pathArgs: Path[];
+        if (Array.isArray(args[0])) {
+            pathArgs = args[0];
+        } else {
+            pathArgs = args;
+        }
+        if (pathArgs.length == 1) {
+            pathArgs = parsePath(pathArgs[0])
+        }
+        if (pathArgs.length == 1) {
+            return this.childs[pathArgs[0] as number];
+        } else if (pathArgs.length > 1) {
+            const child = this.childs[pathArgs[0] as number];
+            if (child === undefined) {
+                return undefined;
+            }
+            return (child as PathAccessible).get(pathArgs.slice(1));
+        } else {
+            return this;
         };
+    };
+
+    set(index: Path | Path[], value: NbtValue): void {
+        if (typeof index === "string" || typeof index === "number") {
+            this.childs[index as number] = value;
+        } else if (Array.isArray(index)) {
+            if (index.length == 1) {
+                this.childs[index[0] as number] = value;
+            } else if (index.length > 1) {
+                const parent = this.get(index.slice(0, -1));
+                if (parent !== undefined) {
+                    (parent as PathAccessible).set(index.slice(-1), value);
+                }
+            };
+        };
+    };
+
+    text(ispretty?: boolean): string {
+        const tl: string[] = [];
+        for (let i = 0; i < this.childs.length; i++) {
+            tl.push(this.childs[i].text(ispretty));
+        }
+        return `[${tl.join(", ")}]`;
     };
 };
 
-export class NbtByteArray {
-    constructor(childsal) {
-        this.childs = [];
-        this.addChild = function (value) {
-            if (value instanceof NbtNumber && value.unit == "b") {
-                this.childs.push(value)
-            } else {
-                throw new Error('NbtByteArray only accept NbtNumber with unit "b"')
-            }
-        };
-        this.isempty = function () {
-            return (this.childs.length == 0 ? true : false);
-        };
-        this.get = function () {
-            var args = Array.prototype.slice.call(arguments);
-            if (gettype.call(args[0]) == "[object Array]") {
-                args = args[0];
-            };
-            if (args.length == 1) {
-                args = parsePath(args[0])
-            }
-            if (args.length == 1) {
-                return this.childs[args[0]];
-            } else if (args.length > 1) {
-                throw new Error("NbtByteArray only accept one index")
-            } else {
-                return this;
-            };
-        };
-        this.set = function (index, value) {
-            if (index.length == 1) {
-                if (value instanceof NbtNumber && value.unit == "b") {
-                    this.childs[index[0]] = value;
-                } else {
-                    throw new Error('NbtByteArray only accept NbtNumber with unit "b"')
-                }
-            } else if (index.length > 1) {
-                throw new Error("NbtByteArray only accept one index")
-            };
-        };
-        this.text = function (ispretty) {
-            var tl = [];
-            for (var i = 0; i < this.childs.length; i++) {
-                tl.push(this.childs[i].text(ispretty));
-            }
-            return `[B; ${tl.join(", ")}]`;
-        };
+abstract class NbtNumberArray extends NbtValue {
+    childs: NbtNumber[] = [];
+    readonly unit: string;
+    protected readonly label: string;
+
+    constructor(unit: string, label: string, childsal?: NbtNumber[]) {
+        super();
+        this.unit = unit;
+        this.label = label;
         if (childsal) {
-            for (var i = 0; i < childsal.length; i++) {
-                this.addChild(childsal[i]);
+            for (const value of childsal) {
+                this.addChild(value);
             }
+        }
+    }
+
+    protected validateValue(value: NbtNumber): void {
+        if (!(value instanceof NbtNumber && value.unit === this.unit)) {
+            const unitDesc = this.unit === "" ? "without unit" : `with unit "${this.unit}"`;
+            throw new Error(`${this.constructor.name} only accept NbtNumber ${unitDesc}`);
+        }
+    }
+
+    addChild(value: NbtNumber): void {
+        this.validateValue(value);
+        this.childs.push(value);
+    };
+
+    isempty(): boolean {
+        return (this.childs.length == 0 ? true : false);
+    };
+
+    get(path: Path | Path[]): NbtValue | undefined;
+    get(...path: Path[]): NbtValue | undefined;
+    get(...args: any[]): NbtValue | undefined {
+        let pathArgs: Path[];
+        if (Array.isArray(args[0])) {
+            pathArgs = args[0];
+        } else {
+            pathArgs = args;
+        }
+        if (pathArgs.length == 1) {
+            pathArgs = parsePath(pathArgs[0])
+        }
+        if (pathArgs.length == 1) {
+            return this.childs[pathArgs[0] as number];
+        } else if (pathArgs.length > 1) {
+            throw new Error(`${this.constructor.name} only accept one index`)
+        } else {
+            return this;
         };
+    };
+
+    set(index: Path | Path[], value: NbtNumber): void {
+        const indices = Array.isArray(index) ? index : [index];
+        if (indices.length == 1) {
+            this.validateValue(value);
+            this.childs[indices[0] as number] = value;
+        } else if (indices.length > 1) {
+            throw new Error(`${this.constructor.name} only accept one index`)
+        };
+    };
+
+    text(ispretty?: boolean): string {
+        const tl: string[] = [];
+        for (let i = 0; i < this.childs.length; i++) {
+            tl.push(this.childs[i].text(ispretty));
+        }
+        return `[${this.label}; ${tl.join(", ")}]`;
     };
 };
 
-export class NbtNumber {
-    constructor(value, unit = "") {
+export class NbtIntArray extends NbtNumberArray {
+    constructor(childsal?: NbtNumber[]) {
+        super("", "I", childsal);
+    }
+};
+
+export class NbtLongArray extends NbtNumberArray {
+    constructor(childsal?: NbtNumber[]) {
+        super("l", "L", childsal);
+    }
+};
+
+export class NbtByteArray extends NbtNumberArray {
+    constructor(childsal?: NbtNumber[]) {
+        super("b", "B", childsal);
+    }
+};
+
+export class NbtNumber extends NbtValue {
+    value: number;
+    unit: string;
+
+    constructor(value: number, unit = "") {
+        super();
         unit = unit.toLowerCase();
         if (unit == "b") {
             if (Math.round(value) > 127) {
@@ -325,72 +292,85 @@ export class NbtNumber {
                 this.value = Math.round(value);
             }
         } else if (unit == "l") {
-            if (Math.round(value) > 9223372036854775807n) {
-                this.value = 9223372036854775807n;
-            } else if (Math.round(value) < -9223372036854775808n) {
-                this.value = -9223372036854775808n;
+            if (BigInt(Math.round(value)) > 9223372036854775807n) {
+                this.value = Number(9223372036854775807n);
+            } else if (BigInt(Math.round(value)) < -9223372036854775808n) {
+                this.value = Number(-9223372036854775808n);
             } else {
                 this.value = Math.round(value);
             }
         } else if (unit == "d") {
-            this.value = changeToFloat(value);
+            this.value = changeToFloat(value) as number;
         } else if (unit == "f") {
-            this.value = changeToFloat(value);
+            this.value = changeToFloat(value) as number;
         } else if (unit == "") {
             this.value = Math.round(value);
         } else {
             this.value = value;
         };
         this.unit = unit;
-        this.text = function (ispretty) {
-            if (ispretty) {
-                return `${highlightCode(this.value.toString(), "num")}${unit ? highlightCode(this.unit, "unit") : ""}`
-            } else {
-                return `${this.value}${unit ? this.unit : ""}`
-            };
+    }
+
+    text(ispretty?: boolean): string {
+        if (ispretty) {
+            return `${highlightCode(this.value.toString(), "num")}${this.unit ? highlightCode(this.unit, "unit") : ""}`
+        } else {
+            return `${this.value}${this.unit ? this.unit : ""}`
         };
     };
 };
 
-export class NbtString {
-    constructor(value) {
+export class NbtString extends NbtValue {
+    value: string;
+
+    constructor(value: string) {
+        super();
         this.value = value;
-        this.text = function (ispretty) {
-            // 转义特殊字符
-            let escapedValue = this.value
-                .replace(/\\/g, '\\\\')
-                .replace(/'/g, "\\'")
-                .replace(/\n/g, "\\n")
-                .replace(/\r/g, "\\r")
-                .replace(/\t/g, "\\t");
+    }
 
-            if (ispretty) {
-                return highlightCode(`'${escapedValue}'`, "str");
-            } else {
-                return `'${escapedValue}'`;
-            }
-        };
+    text(ispretty?: boolean): string {
+        // 转义特殊字符
+        const escapedValue = this.value
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\n/g, "\\n")
+            .replace(/\r/g, "\\r")
+            .replace(/\t/g, "\\t");
+
+        if (ispretty) {
+            return highlightCode(`'${escapedValue}'`, "str");
+        } else {
+            return `'${escapedValue}'`;
+        }
     };
 };
 
-export class NbtBool {
-    constructor(value) {
+export class NbtBool extends NbtValue {
+    value: boolean;
+
+    constructor(value: unknown) {
+        super();
         this.value = !!value;
-        this.text = function (ispretty) {
-            if (ispretty) {
-                return highlightCode(`${this.value}`, "bool")
-            } else {
-                return `${this.value}`
-            };
+    }
+
+    text(ispretty?: boolean): string {
+        if (ispretty) {
+            return highlightCode(`${this.value}`, "bool")
+        } else {
+            return `${this.value}`
         };
     };
 };
 
-export class NbtNull {
+export class NbtNull extends NbtValue {
+    value: null;
+
     constructor() {
+        super();
         this.value = null;
     }
-    text = function (ispretty) {
+
+    text(ispretty?: boolean): string {
         if (ispretty) {
             return highlightCode("null", "bool"); // 使用布尔值的样式
         } else {
@@ -399,7 +379,7 @@ export class NbtNull {
     };
 }
 
-export function arrangementNbt(str) {
+export function arrangementNbt(str: string): string {
     str = str.replace(/(: *)([0-9\.]+)([bfdis])/g, '$1new NbtNumber($2,"$3")');
     str = str.replace(/(, *)([0-9\.]+)([bfdis])( *[,\]])/g, '$1new NbtNumber($2,"$3")$4');
     str = str.replace(/(\[ *)([0-9\.]+)([bfdis])/g, '$1new NbtNumber($2,"$3")');
@@ -409,16 +389,16 @@ export function arrangementNbt(str) {
 
 /**
  * 
- * @deprecated
- * @param {*} str 
+ * @deprecated Use `parseNbtString()` instead
+ * @param str 
  * @returns 
  */
-export function decodeNbtStr(str) {
-    jsObj = eval("obj=" + arrangementNbt(str));
+export function decodeNbtStr(str: string): NbtValue {
+    const jsObj = eval("obj=" + arrangementNbt(str));
     return changeObj(jsObj);
 }
 
-export function changeObj(jsObj) {
+export function changeObj(jsObj: any): NbtValue {
     if (gettype.call(jsObj) == "[object String]") {
         return new NbtString(jsObj);
     } else if (gettype.call(jsObj) == "[object Boolean]") {
@@ -429,27 +409,28 @@ export function changeObj(jsObj) {
         if (jsObj instanceof NbtNumber) {
             return jsObj;
         } else {
-            var a = new NbtObject();
-            for (var i in jsObj) {
+            const a = new NbtObject();
+            for (const i in jsObj) {
                 a.addChild(i, changeObj(jsObj[i]))
             }
             return a;
         }
     } else if (gettype.call(jsObj) == "[object Array]") {
-        var a = new NbtList();
-        for (var i in jsObj) {
+        const a = new NbtList();
+        for (const i in jsObj) {
             a.addChild(changeObj(jsObj[i]));
         }
         return a;
     }
+    throw new Error(`Unsupported type: ${gettype.call(jsObj)}`);
 }
 
-export function parsePath(path) {
+export function parsePath(path: string | number): (string | number)[] {
     if (typeof path === 'number') {
         return [path];
     }
 
-    const tokens = [];
+    const tokens: (string | number)[] = [];
     let current = '';
     let inQuote = false;
     let inBracket = false;
@@ -489,7 +470,7 @@ export function parsePath(path) {
                 if (!inBracket) {
                     throw new Error('Unexpected closing bracket');
                 }
-                let content = current.trim();
+                const content = current.trim();
                 if (content === '') {
                     throw new Error('Empty brackets are not allowed');
                 }
@@ -537,7 +518,7 @@ export function parsePath(path) {
     return tokens;
 }
 
-export function parseNbtString(str) {
+export function parseNbtString<V extends NbtValue = NbtValue>(str: string): V {
     let index = 0;
     const length = str.length;
 
@@ -549,7 +530,7 @@ export function parseNbtString(str) {
         }
     }
 
-    function parseValue() {
+    function parseValue(): NbtValue {
         skipWhitespace();
         if (index >= length) {
             throw new Error("Unexpected end of input");
@@ -580,10 +561,9 @@ export function parseNbtString(str) {
         throw new Error(`Unexpected character: ${char}`);
     }
 
-    function parseObject() {
+    function parseObject(): NbtObject {
         index++; // 跳过 '{'
         const obj = new NbtObject();
-        let first = true;
         let expectComma = false;
 
         while (index < length) {
@@ -624,19 +604,18 @@ export function parseNbtString(str) {
             const value = parseValue();
             obj.addChild(key, value);
 
-            first = false;
             expectComma = true; // 下一个元素前需要逗号
             skipWhitespace();
         }
         throw new Error("Unterminated object");
     }
 
-    function parseArray() {
+    function parseArray(): NbtValue {
         index++; // 跳过 '['
         // 检查是否为类型化数组（B; / I; / L;）
         skipWhitespace();
-        const typedArrayCtors = { B: NbtByteArray, I: NbtIntArray, L: NbtLongArray };
-        let arr;
+        const typedArrayCtors: Record<string, new () => NbtByteArray | NbtIntArray | NbtLongArray> = { B: NbtByteArray, I: NbtIntArray, L: NbtLongArray };
+        let arr: NbtList | NbtByteArray | NbtIntArray | NbtLongArray;
         const TypedCtor = typedArrayCtors[str[index]];
         if (TypedCtor) {
             index++;
@@ -650,7 +629,6 @@ export function parseNbtString(str) {
             arr = new NbtList();
         }
 
-        let first = true;
         let expectComma = false;
 
         while (index < length) {
@@ -675,16 +653,15 @@ export function parseNbtString(str) {
             }
 
             const value = parseValue();
-            arr.addChild(value);
+            arr.addChild(value as NbtNumber);
 
-            first = false;
             expectComma = true; // 下一个元素前需要逗号
             skipWhitespace();
         }
         throw new Error("Unterminated array");
     }
 
-    function parseString(quoteChar) {
+    function parseString(quoteChar: string): NbtString {
         index++; // 跳过开头的引号
         let result = "";
         let escaped = false;
@@ -745,7 +722,7 @@ export function parseNbtString(str) {
         throw new Error("Unterminated string");
     }
 
-    function parseNumber() {
+    function parseNumber(): NbtNumber {
         let start = index;
         // 匹配数字（包括负号、小数点和科学计数法）
         if (str[index] === '-') {
@@ -797,7 +774,7 @@ export function parseNbtString(str) {
         return new NbtNumber(numValue, unit);
     }
 
-    function parseKey() {
+    function parseKey(): string {
         skipWhitespace();
         if (index >= length) {
             throw new Error("Unexpected end of input while parsing key");
@@ -831,7 +808,7 @@ export function parseNbtString(str) {
     }
 
     // 辅助函数：解析字符串内容（用于键和值）
-    function parseStringContent(quoteChar) {
+    function parseStringContent(quoteChar: string): string {
         let result = "";
         let escaped = false;
 
@@ -900,12 +877,11 @@ export function parseNbtString(str) {
     try {
         const value = parseValue();
         ensureEnd();
-        return value;
+        return value as V;
     } catch (e) {
         // 添加位置信息
         // context: before>>e<<after
         const context = str.substring(Math.max(0, index - 10), index) + ">>" + (str[index] || "") + "<<" + str.substring(index + 1, index + 10);
-        throw new Error(`${e.message} at position ${index}. Context: ...${context}...`);
+        throw new Error(`${(e as Error).message} at position ${index}. Context: ...${context}...`);
     }
 }
-
