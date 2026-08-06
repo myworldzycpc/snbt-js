@@ -45,5 +45,11 @@ describe('NBT Parser', () => {
     expect((result.get("byte_array") as NbtByteArray).childs[0].value).to.equal(100);
   });
 
+  it('should parse quoted keys starting with a number', () => {
+    const result = parseNbtString<NbtObject>("{'1key':1}");
+
+    expect((result.get("1key") as NbtNumber).value).to.equal(1);
+  });
+
   // 添加更多测试用例...
 });

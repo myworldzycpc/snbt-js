@@ -587,11 +587,11 @@ export function parseNbtString<V extends NbtValue = NbtValue>(str: string): V {
                 }
             }
 
-            const key = parseKey();
+            const { key, quoted } = parseKey();
             skipWhitespace();
 
             // 检查键是否以数字开头（非引号包裹时）
-            if (!/^['"]/.test(key) && /^\d/.test(key)) {
+            if (!quoted && /^\d/.test(key)) {
                 throw new Error(`Key cannot start with a digit: ${key}`);
             }
 
@@ -774,7 +774,7 @@ export function parseNbtString<V extends NbtValue = NbtValue>(str: string): V {
         return new NbtNumber(numValue, unit);
     }
 
-    function parseKey(): string {
+    function parseKey(): { key: string; quoted: boolean } {
         skipWhitespace();
         if (index >= length) {
             throw new Error("Unexpected end of input while parsing key");
@@ -784,7 +784,7 @@ export function parseNbtString<V extends NbtValue = NbtValue>(str: string): V {
         if (str[index] === "'" || str[index] === '"') {
             const quote = str[index];
             index++;
-            return parseStringContent(quote);
+            return { key: parseStringContent(quote), quoted: true };
         }
 
         // 标识符键：允许Unicode字符（包括中文）
@@ -804,7 +804,7 @@ export function parseNbtString<V extends NbtValue = NbtValue>(str: string): V {
             throw new Error("Empty key is not allowed");
         }
 
-        return key;
+        return { key, quoted: false };
     }
 
     // 辅助函数：解析字符串内容（用于键和值）
