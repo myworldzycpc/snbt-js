@@ -37,6 +37,23 @@ interface PathAccessible extends NbtValue {
     set(index: Path | Path[], value: NbtValue): void;
 }
 
+function isSafeKey(key: string): boolean {
+    if (key === "" || /^\d/.test(key)) {
+        return false;
+    }
+    return !/[\s{}[\]:,]/.test(key);
+}
+
+function quoteKey(key: string): string {
+    const escaped = key
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "\\r")
+        .replace(/\t/g, "\\t");
+    return `"${escaped}"`;
+}
+
 export class NbtObject extends NbtValue {
     childs: Record<string, NbtValue>;
 
@@ -101,7 +118,8 @@ export class NbtObject extends NbtValue {
     text(ispretty?: boolean): string {
         const tl: string[] = [];
         for (const i in this.childs) {
-            tl.push(`${ispretty ? highlightCode(i, "key") : i}: ${this.childs[i].text(ispretty)}`);
+            const key = isSafeKey(i) ? i : quoteKey(i);
+            tl.push(`${ispretty ? highlightCode(key, "key") : key}: ${this.childs[i].text(ispretty)}`);
         };
         return `{${tl.join(", ")}}`;
     };
